@@ -1,6 +1,8 @@
 #include <SDL3/SDL.h>
 #include <iostream>
 
+#include "TriangleRasterizer.h"
+
 SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
 
@@ -45,6 +47,8 @@ int main() {
         return 1;
     }
 
+    TriangleRasterizer triangle_rasterizer;
+
     // --- main loop ---
 
     bool running = true;
@@ -61,9 +65,11 @@ int main() {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
 
-        SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-        SDL_RenderLine(renderer, 0, 0, WINDOW_WIDTH - 1, WINDOW_HEIGHT - 1);
-        SDL_RenderLine(renderer, 0, WINDOW_HEIGHT - 1, WINDOW_WIDTH - 1, 0);
+        SDL_FPoint p1 = { WINDOW_WIDTH / 4,     WINDOW_HEIGHT / 4 * 3 };
+        SDL_FPoint p2 = { WINDOW_WIDTH / 4 * 3, WINDOW_HEIGHT / 4 * 3 };
+        SDL_FPoint p3 = { WINDOW_WIDTH / 4 * 2, WINDOW_HEIGHT / 4     };
+        Triangle triangle = { p1, p2, p3 };
+        triangle_rasterizer.rasterize(renderer, triangle);
 
         SDL_RenderPresent(renderer);
     }
