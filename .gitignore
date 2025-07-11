@@ -1,0 +1,5 @@
+.vscode
+
+*.dSYM
+
+triangle-rasterizer-test
