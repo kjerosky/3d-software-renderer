@@ -1,4 +1,5 @@
 #include <SDL3/SDL.h>
+#include <SDL3_image/SDL_image.h>
 #include <iostream>
 #include <algorithm>
 
@@ -6,16 +7,21 @@
 
 SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
+SDL_Surface* texture_surface = nullptr;
 
 // --------------------------------------------------------------------------
 
 void cleanup() {
-    if (window != nullptr) {
-        SDL_DestroyWindow(window);
+    if (texture_surface != nullptr) {
+        SDL_DestroySurface(texture_surface);
     }
 
     if (renderer != nullptr) {
         SDL_DestroyRenderer(renderer);
+    }
+
+    if (window != nullptr) {
+        SDL_DestroyWindow(window);
     }
 
     SDL_Quit();
@@ -34,21 +40,46 @@ int main() {
         return 1;
     }
 
-    SDL_Window* window = SDL_CreateWindow("Test", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE);
-    if (!window) {
+    window = SDL_CreateWindow("Test", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE);
+    if (window == nullptr) {
         std::cerr << "[ERROR] SDL_CreateWindow error: " << SDL_GetError() << std::endl;
         cleanup();
         return 1;
     }
 
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, nullptr);
-    if (!renderer) {
-        std::cerr << "[ERROR] SDL_CreateRenderer error:" << SDL_GetError() << std::endl;
+    renderer = SDL_CreateRenderer(window, nullptr);
+    if (renderer == nullptr) {
+        std::cerr << "[ERROR] SDL_CreateRenderer error: " << SDL_GetError() << std::endl;
         cleanup();
         return 1;
     }
 
+    texture_surface = IMG_Load("test-texture.png");
+    if (texture_surface == nullptr) {
+        std::cerr << "[ERROR] IMG_Load error: " << SDL_GetError() << std::endl;
+        cleanup();
+        return 1;
+    }
+
+    const SDL_PixelFormatDetails* pixel_format_details = SDL_GetPixelFormatDetails(texture_surface->format);
+    if (pixel_format_details->bytes_per_pixel != 4) {
+        SDL_Surface* converted_surface = SDL_ConvertSurface(texture_surface, SDL_PIXELFORMAT_RGBA8888);
+        if (converted_surface == nullptr) {
+            std::cerr << "[ERROR] SDL_ConvertSurface could not convert loaded image surface to RGBA8888 pixel format: " << SDL_GetError() << std::endl;
+            cleanup();
+            return 1;
+        } else {
+            SDL_DestroySurface(texture_surface);
+            texture_surface = converted_surface;
+        }
+    }
+
     TriangleRasterizer triangle_rasterizer;
+
+    bool is_rasterizing_textures = false;
+
+    const bool* keyboard_state = SDL_GetKeyboardState(nullptr);
+    bool previous_render_mode_key_state = false;
 
     // --- main loop ---
 
@@ -63,20 +94,37 @@ int main() {
             }
         }
 
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        const bool current_render_mode_key_state = keyboard_state[SDL_SCANCODE_SPACE];
+        if (!previous_render_mode_key_state && current_render_mode_key_state) {
+            is_rasterizing_textures = !is_rasterizing_textures;
+        }
+        previous_render_mode_key_state = current_render_mode_key_state;
+
+        SDL_SetRenderDrawColor(renderer, 32, 32, 32, 255);
         SDL_RenderClear(renderer);
 
         int render_width, render_height;
         SDL_GetCurrentRenderOutputSize(renderer, &render_width, &render_height);
 
-        float side_length = std::min(render_width * 0.75f, render_height * 0.75f);
-        float height = side_length / 2.0f * tanf(M_PI / 3.0f);
-        Triangle equilateral_triangle = {
-            {{ render_width / 2.0f - side_length / 2.0f, render_height / 2.0f + height / 2.0f}, { 1.0f, 0.0f, 0.0f }},
-            {{ render_width / 2.0f + side_length / 2.0f, render_height / 2.0f + height / 2.0f}, { 0.0f, 1.0f, 0.0f }},
-            {{ render_width / 2.0f, render_height / 2.0f - height / 2.0f}, { 0.0f, 0.0f, 1.0f }},
+        const float half_side_length = std::min(render_width * 0.75f, render_height * 0.75f) / 2.0f;
+        Triangle tri1 = {
+            {{ render_width / 2.0f - half_side_length, render_height / 2.0f + half_side_length }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }},
+            {{ render_width / 2.0f + half_side_length, render_height / 2.0f + half_side_length }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f }},
+            {{ render_width / 2.0f + half_side_length, render_height / 2.0f - half_side_length }, { 1.0f, 1.0f, 0.0f }, { 1.0f, 1.0f }},
         };
-        triangle_rasterizer.rasterize(renderer, equilateral_triangle);
+        Triangle tri2 = {
+            {{ render_width / 2.0f - half_side_length, render_height / 2.0f + half_side_length }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }},
+            {{ render_width / 2.0f + half_side_length, render_height / 2.0f - half_side_length }, { 1.0f, 1.0f, 0.0f }, { 1.0f, 1.0f }},
+            {{ render_width / 2.0f - half_side_length, render_height / 2.0f - half_side_length }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 1.0f }},
+        };
+
+        SDL_Surface* render_texture_surface = nullptr;
+        if (is_rasterizing_textures) {
+            render_texture_surface = texture_surface;
+        }
+
+        triangle_rasterizer.rasterize(renderer, tri1, render_texture_surface);
+        triangle_rasterizer.rasterize(renderer, tri2, render_texture_surface);
 
         SDL_RenderPresent(renderer);
     }

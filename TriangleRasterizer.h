@@ -27,6 +27,7 @@ struct Color {
 struct Vertex {
     SDL_FPoint coordinates;
     Color color;
+    SDL_FPoint uv_coordinates;
 };
 
 struct Triangle {
@@ -42,11 +43,12 @@ public:
     TriangleRasterizer();
     ~TriangleRasterizer();
 
-    void rasterize(SDL_Renderer* renderer, const Triangle& triangle);
+    void rasterize(SDL_Renderer* renderer, const Triangle& triangle, SDL_Surface* texture);
 
 private:
 
     float edge(const SDL_FPoint& a, const SDL_FPoint& b, const SDL_FPoint& p);
+    Color sample_locked_surface(SDL_Surface* surface, const SDL_PixelFormatDetails* surface_pixel_format_details, const SDL_FPoint& texture_coordinates);
 };
 
 #endif
