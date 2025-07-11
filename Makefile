@@ -1,6 +1,6 @@
-EXECUTABLE = triangle-rasterizer-test
+EXECUTABLE = 3d-software-renderer
 CC = g++
-FLAGS = --std=c++17 -Wall -g
+FLAGS = --std=c++17 -Wall
 
 INCLUDE_PATHS = -I /opt/homebrew/include
 LIBRARY_PATHS = -L /opt/homebrew/lib

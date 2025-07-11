@@ -88,7 +88,7 @@ int main() {
 
     TriangleRasterizer triangle_rasterizer;
 
-    bool is_rasterizing_textures = false;
+    bool is_rasterizing_textures = true;
 
     const bool* keyboard_state = SDL_GetKeyboardState(nullptr);
     bool previous_render_mode_key_state = false;
