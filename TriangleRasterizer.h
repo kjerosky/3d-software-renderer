@@ -2,11 +2,37 @@
 #define TRIANGLE_RASTERIZER_H
 
 #include <SDL3/SDL.h>
+#include <algorithm>
+
+struct Color {
+    float r;
+    float g;
+    float b;
+
+    Color operator*(float x) const {
+        return { r * x, g * x, b * x };
+    }
+
+    Color operator+(const Color& other) const {
+        return { r + other.r, g + other.g, b + other.b };
+    }
+
+    void clamp() {
+        r = std::clamp(r, 0.0f, 1.0f);
+        g = std::clamp(g, 0.0f, 1.0f);
+        b = std::clamp(b, 0.0f, 1.0f);
+    }
+};
+
+struct Vertex {
+    SDL_FPoint coordinates;
+    Color color;
+};
 
 struct Triangle {
-    SDL_FPoint p1;
-    SDL_FPoint p2;
-    SDL_FPoint p3;
+    Vertex v1;
+    Vertex v2;
+    Vertex v3;
 };
 
 class TriangleRasterizer {

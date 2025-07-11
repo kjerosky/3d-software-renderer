@@ -1,7 +1,5 @@
 #include "TriangleRasterizer.h"
 
-#include <algorithm>
-
 // --------------------------------------------------------------------------
 
 TriangleRasterizer::TriangleRasterizer() {
@@ -17,29 +15,42 @@ TriangleRasterizer::~TriangleRasterizer() {
 // --------------------------------------------------------------------------
 
 void TriangleRasterizer::rasterize(SDL_Renderer* renderer, const Triangle& triangle) {
-    int bounding_box_min_x = std::min({ triangle.p1.x, triangle.p2.x, triangle.p3.x });
-    int bounding_box_max_x = std::max({ triangle.p1.x, triangle.p2.x, triangle.p3.x });
-    int bounding_box_min_y = std::min({ triangle.p1.y, triangle.p2.y, triangle.p3.y });
-    int bounding_box_max_y = std::max({ triangle.p1.y, triangle.p2.y, triangle.p3.y });
+    int bounding_box_min_x = std::min({ triangle.v1.coordinates.x, triangle.v2.coordinates.x, triangle.v3.coordinates.x });
+    int bounding_box_max_x = std::max({ triangle.v1.coordinates.x, triangle.v2.coordinates.x, triangle.v3.coordinates.x });
+    int bounding_box_min_y = std::min({ triangle.v1.coordinates.y, triangle.v2.coordinates.y, triangle.v3.coordinates.y });
+    int bounding_box_max_y = std::max({ triangle.v1.coordinates.y, triangle.v2.coordinates.y, triangle.v3.coordinates.y });
 
     // We'll be more efficient here by limiting the bounding box to the viewable area.
     int render_width, render_height;
     SDL_GetCurrentRenderOutputSize(renderer, &render_width, &render_height);
-    bounding_box_min_x = std::max(bounding_box_min_x, 0);
-    bounding_box_max_x = std::min(bounding_box_max_x, render_width - 1);
-    bounding_box_min_y = std::max(bounding_box_min_y, 0);
-    bounding_box_max_y = std::min(bounding_box_max_y, render_height - 1);
+    bounding_box_min_x = std::clamp(bounding_box_min_x, 0, render_width - 1);
+    bounding_box_max_x = std::clamp(bounding_box_max_x, 0, render_width - 1);
+    bounding_box_min_y = std::clamp(bounding_box_min_y, 0, render_height - 1);
+    bounding_box_max_y = std::clamp(bounding_box_max_y, 0, render_height - 1);
+
+    float area = edge(triangle.v1.coordinates, triangle.v2.coordinates, triangle.v3.coordinates);
+    if (area == 0) {
+        return;
+    }
 
     for (int y = bounding_box_min_y; y <= bounding_box_max_y; y++) {
         for (int x = bounding_box_min_x; x <= bounding_box_max_x; x++) {
             SDL_FPoint p = { x + 0.5f, y + 0.5f };
 
-            float w1 = edge(triangle.p1, triangle.p2, p);
-            float w2 = edge(triangle.p2, triangle.p3, p);
-            float w3 = edge(triangle.p3, triangle.p1, p);
+            float w1 = edge(triangle.v2.coordinates, triangle.v3.coordinates, p);
+            float w2 = edge(triangle.v3.coordinates, triangle.v1.coordinates, p);
+            float w3 = edge(triangle.v1.coordinates, triangle.v2.coordinates, p);
 
             if (w1 >= 0 && w2 >= 0 && w3 >= 0) {
-                SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+                // Normalize to barycentric coordinates.
+                w1 /= area;
+                w2 /= area;
+                w3 /= area;
+
+                Color final_color = triangle.v1.color * w1 + triangle.v2.color * w2 + triangle.v3.color * w3;
+                final_color.clamp();
+
+                SDL_SetRenderDrawColor(renderer, final_color.r * 255, final_color.g * 255, final_color.b * 255, 255);
                 SDL_RenderPoint(renderer, x, y);
             }
         }

@@ -1,5 +1,6 @@
 #include <SDL3/SDL.h>
 #include <iostream>
+#include <algorithm>
 
 #include "TriangleRasterizer.h"
 
@@ -33,7 +34,7 @@ int main() {
         return 1;
     }
 
-    SDL_Window* window = SDL_CreateWindow("Test", WINDOW_WIDTH, WINDOW_HEIGHT, 0);
+    SDL_Window* window = SDL_CreateWindow("Test", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE);
     if (!window) {
         std::cerr << "[ERROR] SDL_CreateWindow error: " << SDL_GetError() << std::endl;
         cleanup();
@@ -65,11 +66,17 @@ int main() {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
 
-        SDL_FPoint p1 = { WINDOW_WIDTH / 4,     WINDOW_HEIGHT / 4 * 3 };
-        SDL_FPoint p2 = { WINDOW_WIDTH / 4 * 3, WINDOW_HEIGHT / 4 * 3 };
-        SDL_FPoint p3 = { WINDOW_WIDTH / 4 * 2, WINDOW_HEIGHT / 4     };
-        Triangle triangle = { p1, p2, p3 };
-        triangle_rasterizer.rasterize(renderer, triangle);
+        int render_width, render_height;
+        SDL_GetCurrentRenderOutputSize(renderer, &render_width, &render_height);
+
+        float side_length = std::min(render_width * 0.75f, render_height * 0.75f);
+        float height = side_length / 2.0f * tanf(M_PI / 3.0f);
+        Triangle equilateral_triangle = {
+            {{ render_width / 2.0f - side_length / 2.0f, render_height / 2.0f + height / 2.0f}, { 1.0f, 0.0f, 0.0f }},
+            {{ render_width / 2.0f + side_length / 2.0f, render_height / 2.0f + height / 2.0f}, { 0.0f, 1.0f, 0.0f }},
+            {{ render_width / 2.0f, render_height / 2.0f - height / 2.0f}, { 0.0f, 0.0f, 1.0f }},
+        };
+        triangle_rasterizer.rasterize(renderer, equilateral_triangle);
 
         SDL_RenderPresent(renderer);
     }
