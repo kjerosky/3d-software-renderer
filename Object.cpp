@@ -40,10 +40,14 @@ void Object::rasterize(TriangleRasterizer& triangle_rasterizer, SDL_Renderer* re
         p1 /= p1.w;
         p2 /= p2.w;
 
+        glm::vec2 screen_p0 = glm::vec2(linear_remap(p0.x, -1.0f, 1.0f, 0, render_width - 1.0f), linear_remap(p0.y, -1.0f, 1.0f, render_height - 1.0f, 0.0f));
+        glm::vec2 screen_p1 = glm::vec2(linear_remap(p1.x, -1.0f, 1.0f, 0, render_width - 1.0f), linear_remap(p1.y, -1.0f, 1.0f, render_height - 1.0f, 0.0f));
+        glm::vec2 screen_p2 = glm::vec2(linear_remap(p2.x, -1.0f, 1.0f, 0, render_width - 1.0f), linear_remap(p2.y, -1.0f, 1.0f, render_height - 1.0f, 0.0f));
+
         Triangle triangle = {
-            {{ linear_remap(p0.x, -1.0f, 1.0f, 0, render_width - 1.0f), linear_remap(p0.y, -1.0f, 1.0f, render_height - 1.0f, 0.0f) }, { world_triangle.p0.color.r, world_triangle.p0.color.g, world_triangle.p0.color.b }, { world_triangle.p0.tex_coord.x, world_triangle.p0.tex_coord.y }},
-            {{ linear_remap(p1.x, -1.0f, 1.0f, 0, render_width - 1.0f), linear_remap(p1.y, -1.0f, 1.0f, render_height - 1.0f, 0.0f) }, { world_triangle.p1.color.r, world_triangle.p1.color.g, world_triangle.p1.color.b }, { world_triangle.p1.tex_coord.x, world_triangle.p1.tex_coord.y }},
-            {{ linear_remap(p2.x, -1.0f, 1.0f, 0, render_width - 1.0f), linear_remap(p2.y, -1.0f, 1.0f, render_height - 1.0f, 0.0f) }, { world_triangle.p2.color.r, world_triangle.p2.color.g, world_triangle.p2.color.b }, { world_triangle.p2.tex_coord.x, world_triangle.p2.tex_coord.y }},
+            { screen_p0, world_triangle.p0.color, world_triangle.p0.tex_coord },
+            { screen_p1, world_triangle.p1.color, world_triangle.p1.tex_coord },
+            { screen_p2, world_triangle.p2.color, world_triangle.p2.tex_coord },
         };
 
         triangle_rasterizer.rasterize(renderer, triangle, texture_surface);

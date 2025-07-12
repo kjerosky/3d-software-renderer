@@ -4,7 +4,7 @@
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <iostream>
-#include <algorithm>
+#include <string>
 
 #include "TriangleRasterizer.h"
 #include "Object.h"

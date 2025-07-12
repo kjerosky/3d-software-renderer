@@ -1,5 +1,7 @@
 #include "TriangleRasterizer.h"
 
+#include <algorithm>
+
 // --------------------------------------------------------------------------
 
 TriangleRasterizer::TriangleRasterizer() {
@@ -20,10 +22,10 @@ void TriangleRasterizer::rasterize(SDL_Renderer* renderer, const Triangle& trian
         pixel_format_details = SDL_GetPixelFormatDetails(texture->format);
     }
 
-    int bounding_box_min_x = std::min({ triangle.v1.coordinates.x, triangle.v2.coordinates.x, triangle.v3.coordinates.x });
-    int bounding_box_max_x = std::max({ triangle.v1.coordinates.x, triangle.v2.coordinates.x, triangle.v3.coordinates.x });
-    int bounding_box_min_y = std::min({ triangle.v1.coordinates.y, triangle.v2.coordinates.y, triangle.v3.coordinates.y });
-    int bounding_box_max_y = std::max({ triangle.v1.coordinates.y, triangle.v2.coordinates.y, triangle.v3.coordinates.y });
+    int bounding_box_min_x = std::min({ triangle.v1.screen_coord.x, triangle.v2.screen_coord.x, triangle.v3.screen_coord.x });
+    int bounding_box_max_x = std::max({ triangle.v1.screen_coord.x, triangle.v2.screen_coord.x, triangle.v3.screen_coord.x });
+    int bounding_box_min_y = std::min({ triangle.v1.screen_coord.y, triangle.v2.screen_coord.y, triangle.v3.screen_coord.y });
+    int bounding_box_max_y = std::max({ triangle.v1.screen_coord.y, triangle.v2.screen_coord.y, triangle.v3.screen_coord.y });
 
     // We'll be more efficient here by limiting the bounding box to the viewable area.
     int render_width, render_height;
@@ -33,7 +35,7 @@ void TriangleRasterizer::rasterize(SDL_Renderer* renderer, const Triangle& trian
     bounding_box_min_y = std::clamp(bounding_box_min_y, 0, render_height - 1);
     bounding_box_max_y = std::clamp(bounding_box_max_y, 0, render_height - 1);
 
-    float area = edge(triangle.v1.coordinates, triangle.v2.coordinates, triangle.v3.coordinates);
+    float area = edge(triangle.v1.screen_coord, triangle.v2.screen_coord, triangle.v3.screen_coord);
     if (area == 0) {
         return;
     }
@@ -44,11 +46,11 @@ void TriangleRasterizer::rasterize(SDL_Renderer* renderer, const Triangle& trian
 
     for (int y = bounding_box_min_y; y <= bounding_box_max_y; y++) {
         for (int x = bounding_box_min_x; x <= bounding_box_max_x; x++) {
-            SDL_FPoint p = { x + 0.5f, y + 0.5f };
+            glm::vec2 p = glm::vec2(x + 0.5f, y + 0.5f);
 
-            float w1 = edge(triangle.v2.coordinates, triangle.v3.coordinates, p);
-            float w2 = edge(triangle.v3.coordinates, triangle.v1.coordinates, p);
-            float w3 = edge(triangle.v1.coordinates, triangle.v2.coordinates, p);
+            float w1 = edge(triangle.v2.screen_coord, triangle.v3.screen_coord, p);
+            float w2 = edge(triangle.v3.screen_coord, triangle.v1.screen_coord, p);
+            float w3 = edge(triangle.v1.screen_coord, triangle.v2.screen_coord, p);
 
             if (w1 >= 0 && w2 >= 0 && w3 >= 0) {
                 // Normalize to barycentric coordinates.
@@ -56,15 +58,15 @@ void TriangleRasterizer::rasterize(SDL_Renderer* renderer, const Triangle& trian
                 w2 /= area;
                 w3 /= area;
 
-                Color color;
+                glm::vec3 color;
                 if (texture == nullptr) {
                     color = triangle.v1.color * w1 + triangle.v2.color * w2 + triangle.v3.color * w3;
-                    color.clamp();
+                    color = glm::clamp(color, 0.0f, 1.0f);
                 } else {
-                    SDL_FPoint interpolated_texture_coordinates = {
-                        triangle.v1.uv_coordinates.x * w1 + triangle.v2.uv_coordinates.x * w2 + triangle.v3.uv_coordinates.x * w3,
-                        triangle.v1.uv_coordinates.y * w1 + triangle.v2.uv_coordinates.y * w2 + triangle.v3.uv_coordinates.y * w3,
-                    };
+                    glm::vec2 interpolated_texture_coordinates = glm::vec2(
+                        triangle.v1.tex_coord.x * w1 + triangle.v2.tex_coord.x * w2 + triangle.v3.tex_coord.x * w3,
+                        triangle.v1.tex_coord.y * w1 + triangle.v2.tex_coord.y * w2 + triangle.v3.tex_coord.y * w3
+                    );
 
                     color = sample_locked_surface(texture, pixel_format_details, interpolated_texture_coordinates);
                 }
@@ -82,32 +84,31 @@ void TriangleRasterizer::rasterize(SDL_Renderer* renderer, const Triangle& trian
 
 // --------------------------------------------------------------------------
 
-Color TriangleRasterizer::sample_locked_surface(SDL_Surface* surface, const SDL_PixelFormatDetails* surface_pixel_format_details, const SDL_FPoint& texture_coordinates) {
-    // For now, we'll clamp texture coordinates.
-    SDL_FPoint uv = {
-        std::clamp(texture_coordinates.x, 0.0f, 1.0f),
-        std::clamp(1.0f - texture_coordinates.y, 0.0f, 1.0f),
-    };
+glm::vec3 TriangleRasterizer::sample_locked_surface(SDL_Surface* surface, const SDL_PixelFormatDetails* surface_pixel_format_details, const glm::vec2& texture_coordinates) {
+    // Remember that the y-coordinate is upside down because of how images are loaded!
+    // Also, for now we'll just clamp texture coordinates.
+    float u = glm::clamp(texture_coordinates.x, 0.0f, 1.0f);
+    float v = glm::clamp(1.0f - texture_coordinates.y, 0.0f, 1.0f);
 
     // We're assuming that the surface has four bytes per pixel, so the client
     // needs to ensure that the surface meets this invariant.
-    int pixel_x = static_cast<int>(uv.x * surface->w);
-    int pixel_y = static_cast<int>(uv.y * surface->h);
+    int pixel_x = static_cast<int>(u * surface->w);
+    int pixel_y = static_cast<int>(v * surface->h);
     int pixel_index = pixel_y * surface->w + pixel_x;
     Uint32 pixel_value = reinterpret_cast<Uint32*>(surface->pixels)[pixel_index];
 
     Uint8 r, g, b;
     SDL_GetRGB(pixel_value, surface_pixel_format_details, nullptr, &r, &g, &b);
 
-    Color color = { r / 255.0f, g / 255.0f, b / 255.0f };
-    color.clamp();
+    glm::vec3 color = glm::vec3(r / 255.0f, g / 255.0f, b / 255.0f);
+    color = glm::clamp(color, 0.0f, 1.0f);
 
     return color;
 }
 
 // --------------------------------------------------------------------------
 
-float TriangleRasterizer::edge(const SDL_FPoint& a, const SDL_FPoint& b, const SDL_FPoint& p) {
+float TriangleRasterizer::edge(const glm::vec2& a, const glm::vec2& b, const glm::vec2& p) {
     // This is the 2d cross product, which gives the signed area of the
     // parallelogram formed by the vectors ab and ap.
     return (p.x - a.x) * (b.y - a.y) - (p.y - a.y) * (b.x - a.x);

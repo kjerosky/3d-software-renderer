@@ -2,32 +2,12 @@
 #define TRIANGLE_RASTERIZER_H
 
 #include <SDL3/SDL.h>
-#include <algorithm>
-
-struct Color {
-    float r;
-    float g;
-    float b;
-
-    Color operator*(float x) const {
-        return { r * x, g * x, b * x };
-    }
-
-    Color operator+(const Color& other) const {
-        return { r + other.r, g + other.g, b + other.b };
-    }
-
-    void clamp() {
-        r = std::clamp(r, 0.0f, 1.0f);
-        g = std::clamp(g, 0.0f, 1.0f);
-        b = std::clamp(b, 0.0f, 1.0f);
-    }
-};
+#include <glm/glm.hpp>
 
 struct Vertex {
-    SDL_FPoint coordinates;
-    Color color;
-    SDL_FPoint uv_coordinates;
+    glm::vec2 screen_coord;
+    glm::vec3 color;
+    glm::vec2 tex_coord;
 };
 
 struct Triangle {
@@ -47,8 +27,8 @@ public:
 
 private:
 
-    float edge(const SDL_FPoint& a, const SDL_FPoint& b, const SDL_FPoint& p);
-    Color sample_locked_surface(SDL_Surface* surface, const SDL_PixelFormatDetails* surface_pixel_format_details, const SDL_FPoint& texture_coordinates);
+    float edge(const glm::vec2& a, const glm::vec2& b, const glm::vec2& p);
+    glm::vec3 sample_locked_surface(SDL_Surface* surface, const SDL_PixelFormatDetails* surface_pixel_format_details, const glm::vec2& tex_coord);
 };
 
 #endif
