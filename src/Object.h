@@ -27,7 +27,12 @@ public:
     ~Object();
 
     void add_triangle(WorldTriangle& triangle);
-    void rasterize(TriangleRasterizer& triangle_rasterizer, SDL_Renderer* renderer, SDL_Surface* texture_surface, glm::mat4& mvp_matrix);
+    void rasterize(TriangleRasterizer& triangle_rasterizer,
+                   SDL_Renderer* renderer,
+                   SDL_Surface* texture_surface,
+                   glm::mat4& projection,
+                   glm::mat4& view,
+                   glm::mat4& model);
 
 private:
 

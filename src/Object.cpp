@@ -27,14 +27,31 @@ void Object::add_triangle(WorldTriangle& triangle) {
 
 // --------------------------------------------------------------------------
 
-void Object::rasterize(TriangleRasterizer& triangle_rasterizer, SDL_Renderer* renderer, SDL_Surface* texture_surface, glm::mat4& mvp_matrix) {
+void Object::rasterize(TriangleRasterizer& triangle_rasterizer,
+                       SDL_Renderer* renderer,
+                       SDL_Surface* texture_surface,
+                       glm::mat4& projection,
+                       glm::mat4& view,
+                       glm::mat4& model) {
+
     int render_width, render_height;
     SDL_GetCurrentRenderOutputSize(renderer, &render_width, &render_height);
 
     for (WorldTriangle world_triangle : triangles) {
-        glm::vec4 p0 = mvp_matrix * glm::vec4(world_triangle.p0.location, 1.0f);
-        glm::vec4 p1 = mvp_matrix * glm::vec4(world_triangle.p1.location, 1.0f);
-        glm::vec4 p2 = mvp_matrix * glm::vec4(world_triangle.p2.location, 1.0f);
+        glm::mat4 mv_matrix = view * model;
+        glm::vec4 p0_view = mv_matrix * glm::vec4(world_triangle.p0.location, 1.0f);
+        glm::vec4 p1_view = mv_matrix * glm::vec4(world_triangle.p1.location, 1.0f);
+        glm::vec4 p2_view = mv_matrix * glm::vec4(world_triangle.p2.location, 1.0f);
+
+        glm::vec3 normal = glm::cross(glm::vec3(p1_view - p0_view), glm::vec3(p2_view - p0_view));
+        glm::vec3 view_direction = glm::vec3(0.0f, 0.0f, -1.0f);
+        if (glm::dot(normal, view_direction) > 0) {
+            continue;
+        }
+
+        glm::vec4 p0 = projection * p0_view;
+        glm::vec4 p1 = projection * p1_view;
+        glm::vec4 p2 = projection * p2_view;
 
         p0 /= p0.w;
         p1 /= p1.w;

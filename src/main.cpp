@@ -85,6 +85,7 @@ int main() {
     TriangleRasterizer triangle_rasterizer;
 
     Object main_object = primitives::cuboid(2.0f, 2.0f, 2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+    Object background_object = primitives::cuboid(1.0f, 1.0f, 1.0f, glm::vec3(0.0f, 1.0f, 0.0f));
 
     glm::vec3 camera_position = glm::vec3(0.0f, 0.0f, 5.0f);
 
@@ -157,14 +158,16 @@ int main() {
         glm::mat4 rotation_y = glm::rotate(glm::mat4(1.0f), glm::radians(rotation_degrees_y), glm::vec3(0.0f, 1.0f, 0.0f));
         glm::mat4 model = rotation_x * rotation_y;
 
-        glm::mat4 mvp_matrix = projection * view * model;
+        glm::mat4 background_object_model_translation = glm::translate(glm::mat4(1.0), glm::vec3(1.5f, 0.0f, 0.0f));
+        glm::mat4 background_object_model = background_object_model_translation * model;
 
         SDL_Surface* render_texture_surface = nullptr;
         if (is_rasterizing_textures) {
             render_texture_surface = texture_surface;
         }
 
-        main_object.rasterize(triangle_rasterizer, renderer, render_texture_surface, mvp_matrix);
+        main_object.rasterize(triangle_rasterizer, renderer, render_texture_surface, projection, view, model);
+        background_object.rasterize(triangle_rasterizer, renderer, render_texture_surface, projection, view, background_object_model);
 
         SDL_RenderPresent(renderer);
     }
