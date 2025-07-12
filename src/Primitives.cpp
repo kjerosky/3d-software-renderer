@@ -11,20 +11,20 @@ Object primitives::quad(float length, float height, glm::vec3 color) {
     glm::vec3 p2 = glm::vec3( length / 2,  height / 2, 0.0f);
     glm::vec3 p3 = glm::vec3(-length / 2,  height / 2, 0.0f);
 
-    WorldTriangle tri1 = {
+    WorldTriangle tri0 = {
         { p0, color, glm::vec2(0.0f, 0.0f) },
         { p1, color, glm::vec2(1.0f, 0.0f) },
         { p2, color, glm::vec2(1.0f, 1.0f) },
     };
-    WorldTriangle tri2 = {
+    WorldTriangle tri1 = {
         { p0, color, glm::vec2(0.0f, 0.0f) },
         { p2, color, glm::vec2(1.0f, 1.0f) },
         { p3, color, glm::vec2(0.0f, 1.0f) },
     };
 
     Object quad;
+    quad.add_triangle(tri0);
     quad.add_triangle(tri1);
-    quad.add_triangle(tri2);
 
     return quad;
 }
@@ -45,84 +45,84 @@ Object primitives::cuboid(float length, float height, float depth, glm::vec3 col
     glm::vec3 p6 = glm::vec3( length / 2,  height / 2, -depth / 2);
     glm::vec3 p7 = glm::vec3(-length / 2,  height / 2, -depth / 2);
 
-    WorldTriangle face1_tri1 = {
+    WorldTriangle face0_tri0 = {
         { p0, color, glm::vec2(0.0f, 0.0f) },
         { p1, color, glm::vec2(1.0f, 0.0f) },
         { p2, color, glm::vec2(1.0f, 1.0f) },
     };
-    WorldTriangle face1_tri2 = {
+    WorldTriangle face0_tri1 = {
         { p0, color, glm::vec2(0.0f, 0.0f) },
         { p2, color, glm::vec2(1.0f, 1.0f) },
         { p3, color, glm::vec2(0.0f, 1.0f) },
     };
 
-    WorldTriangle face2_tri1 = {
+    WorldTriangle face1_tri0 = {
         { p1, color, glm::vec2(0.0f, 0.0f) },
         { p5, color, glm::vec2(1.0f, 0.0f) },
         { p6, color, glm::vec2(1.0f, 1.0f) },
     };
-    WorldTriangle face2_tri2 = {
+    WorldTriangle face1_tri1 = {
         { p1, color, glm::vec2(0.0f, 0.0f) },
         { p6, color, glm::vec2(1.0f, 1.0f) },
         { p2, color, glm::vec2(0.0f, 1.0f) },
     };
 
-    WorldTriangle face3_tri1 = {
+    WorldTriangle face2_tri0 = {
         { p5, color, glm::vec2(0.0f, 0.0f) },
         { p4, color, glm::vec2(1.0f, 0.0f) },
         { p7, color, glm::vec2(1.0f, 1.0f) },
     };
-    WorldTriangle face3_tri2 = {
+    WorldTriangle face2_tri1 = {
         { p5, color, glm::vec2(0.0f, 0.0f) },
         { p7, color, glm::vec2(1.0f, 1.0f) },
         { p6, color, glm::vec2(0.0f, 1.0f) },
     };
 
-    WorldTriangle face4_tri1 = {
+    WorldTriangle face3_tri0 = {
         { p4, color, glm::vec2(0.0f, 0.0f) },
         { p0, color, glm::vec2(1.0f, 0.0f) },
         { p3, color, glm::vec2(1.0f, 1.0f) },
     };
-    WorldTriangle face4_tri2 = {
+    WorldTriangle face3_tri1 = {
         { p4, color, glm::vec2(0.0f, 0.0f) },
         { p3, color, glm::vec2(1.0f, 1.0f) },
         { p7, color, glm::vec2(0.0f, 1.0f) },
     };
 
-    WorldTriangle face5_tri1 = {
+    WorldTriangle face4_tri0 = {
         { p3, color, glm::vec2(0.0f, 0.0f) },
         { p2, color, glm::vec2(1.0f, 0.0f) },
         { p6, color, glm::vec2(1.0f, 1.0f) },
     };
-    WorldTriangle face5_tri2 = {
+    WorldTriangle face4_tri1 = {
         { p3, color, glm::vec2(0.0f, 0.0f) },
         { p6, color, glm::vec2(1.0f, 1.0f) },
         { p7, color, glm::vec2(0.0f, 1.0f) },
     };
 
-    WorldTriangle face6_tri1 = {
+    WorldTriangle face5_tri0 = {
         { p1, color, glm::vec2(0.0f, 0.0f) },
         { p0, color, glm::vec2(1.0f, 0.0f) },
         { p4, color, glm::vec2(1.0f, 1.0f) },
     };
-    WorldTriangle face6_tri2 = {
+    WorldTriangle face5_tri1 = {
         { p1, color, glm::vec2(0.0f, 0.0f) },
         { p4, color, glm::vec2(1.0f, 1.0f) },
         { p5, color, glm::vec2(0.0f, 1.0f) },
     };
 
     Object quad;
+    quad.add_triangle(face0_tri0);
+    quad.add_triangle(face0_tri1);
+    quad.add_triangle(face1_tri0);
     quad.add_triangle(face1_tri1);
-    quad.add_triangle(face1_tri2);
+    quad.add_triangle(face2_tri0);
     quad.add_triangle(face2_tri1);
-    quad.add_triangle(face2_tri2);
+    quad.add_triangle(face3_tri0);
     quad.add_triangle(face3_tri1);
-    quad.add_triangle(face3_tri2);
+    quad.add_triangle(face4_tri0);
     quad.add_triangle(face4_tri1);
-    quad.add_triangle(face4_tri2);
+    quad.add_triangle(face5_tri0);
     quad.add_triangle(face5_tri1);
-    quad.add_triangle(face5_tri2);
-    quad.add_triangle(face6_tri1);
-    quad.add_triangle(face6_tri2);
     return quad;
 }

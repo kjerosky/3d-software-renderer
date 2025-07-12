@@ -85,7 +85,7 @@ int main() {
     TriangleRasterizer triangle_rasterizer(WINDOW_WIDTH, WINDOW_HEIGHT);
 
     Object main_object = primitives::cuboid(2.0f, 2.0f, 2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-    Object background_object = primitives::cuboid(1.5f, 1.5f, 1.5f, glm::vec3(0.0f, 1.0f, 0.0f));
+    Object background_object = primitives::cuboid(1.5f, 1.5f, 1.5f, glm::vec3(1.0f, 0.0f, 0.0f));
 
     glm::vec3 camera_position = glm::vec3(0.0f, 0.0f, 5.0f);
 

@@ -26,10 +26,10 @@ void TriangleRasterizer::rasterize(SDL_Renderer* renderer, const Triangle& trian
         pixel_format_details = SDL_GetPixelFormatDetails(texture->format);
     }
 
-    int bounding_box_min_x = std::min({ triangle.v1.screen_coord.x, triangle.v2.screen_coord.x, triangle.v3.screen_coord.x });
-    int bounding_box_max_x = std::max({ triangle.v1.screen_coord.x, triangle.v2.screen_coord.x, triangle.v3.screen_coord.x });
-    int bounding_box_min_y = std::min({ triangle.v1.screen_coord.y, triangle.v2.screen_coord.y, triangle.v3.screen_coord.y });
-    int bounding_box_max_y = std::max({ triangle.v1.screen_coord.y, triangle.v2.screen_coord.y, triangle.v3.screen_coord.y });
+    int bounding_box_min_x = std::min({ triangle.v0.screen_coord.x, triangle.v1.screen_coord.x, triangle.v2.screen_coord.x });
+    int bounding_box_max_x = std::max({ triangle.v0.screen_coord.x, triangle.v1.screen_coord.x, triangle.v2.screen_coord.x });
+    int bounding_box_min_y = std::min({ triangle.v0.screen_coord.y, triangle.v1.screen_coord.y, triangle.v2.screen_coord.y });
+    int bounding_box_max_y = std::max({ triangle.v0.screen_coord.y, triangle.v1.screen_coord.y, triangle.v2.screen_coord.y });
 
     // We'll be more efficient here by limiting the bounding box to the viewable area.
     int render_width, render_height;
@@ -39,7 +39,7 @@ void TriangleRasterizer::rasterize(SDL_Renderer* renderer, const Triangle& trian
     bounding_box_min_y = std::clamp(bounding_box_min_y, 0, render_height - 1);
     bounding_box_max_y = std::clamp(bounding_box_max_y, 0, render_height - 1);
 
-    float area = edge(triangle.v1.screen_coord, triangle.v2.screen_coord, triangle.v3.screen_coord);
+    float area = edge(triangle.v0.screen_coord, triangle.v1.screen_coord, triangle.v2.screen_coord);
     if (area == 0) {
         return;
     }
@@ -52,17 +52,17 @@ void TriangleRasterizer::rasterize(SDL_Renderer* renderer, const Triangle& trian
         for (int x = bounding_box_min_x; x <= bounding_box_max_x; x++) {
             glm::vec2 p = glm::vec2(x + 0.5f, y + 0.5f);
 
-            float w1 = edge(triangle.v2.screen_coord, triangle.v3.screen_coord, p);
-            float w2 = edge(triangle.v3.screen_coord, triangle.v1.screen_coord, p);
-            float w3 = edge(triangle.v1.screen_coord, triangle.v2.screen_coord, p);
+            float w0 = edge(triangle.v1.screen_coord, triangle.v2.screen_coord, p);
+            float w1 = edge(triangle.v2.screen_coord, triangle.v0.screen_coord, p);
+            float w2 = edge(triangle.v0.screen_coord, triangle.v1.screen_coord, p);
 
-            if (w1 >= 0 && w2 >= 0 && w3 >= 0) {
+            if (w0 >= 0 && w1 >= 0 && w2 >= 0) {
                 // Normalize to barycentric coordinates.
+                w0 /= area;
                 w1 /= area;
                 w2 /= area;
-                w3 /= area;
 
-                float depth = triangle.v1.ndc_z * w1 + triangle.v2.ndc_z * w2 + triangle.v3.ndc_z * w3;
+                float depth = triangle.v0.ndc_z * w0 + triangle.v1.ndc_z * w1 + triangle.v2.ndc_z * w2;
                 int depth_buffer_index = y * depth_buffer_width + x;
                 if (depth > depth_buffer[depth_buffer_index]) {
                     continue;
@@ -72,20 +72,20 @@ void TriangleRasterizer::rasterize(SDL_Renderer* renderer, const Triangle& trian
 
                 glm::vec3 color;
                 if (texture == nullptr) {
-                    color = triangle.v1.color * w1 + triangle.v2.color * w2 + triangle.v3.color * w3;
+                    color = triangle.v0.color * w0 + triangle.v1.color * w1 + triangle.v2.color * w2;
                     color = glm::clamp(color, 0.0f, 1.0f);
                 } else {
+                    float inverse_z0 = 1.0f / triangle.v0.view_z;
                     float inverse_z1 = 1.0f / triangle.v1.view_z;
                     float inverse_z2 = 1.0f / triangle.v2.view_z;
-                    float inverse_z3 = 1.0f / triangle.v3.view_z;
-                    float interpolated_inverse_z = inverse_z1 * w1 + inverse_z2 * w2 + inverse_z3 * w3;
+                    float interpolated_inverse_z = inverse_z0 * w0 + inverse_z1 * w1 + inverse_z2 * w2;
 
+                    glm::vec2 uv_projected0 = triangle.v0.tex_coord * inverse_z0;
                     glm::vec2 uv_projected1 = triangle.v1.tex_coord * inverse_z1;
                     glm::vec2 uv_projected2 = triangle.v2.tex_coord * inverse_z2;
-                    glm::vec2 uv_projected3 = triangle.v3.tex_coord * inverse_z3;
 
                     glm::vec2 interpolated_perspective_corrected_uv =
-                        (uv_projected1 * w1 + uv_projected2 * w2 + uv_projected3 * w3) / interpolated_inverse_z;
+                        (uv_projected0 * w0 + uv_projected1 * w1 + uv_projected2 * w2) / interpolated_inverse_z;
 
                     color = sample_locked_surface(texture, pixel_format_details, interpolated_perspective_corrected_uv);
                 }

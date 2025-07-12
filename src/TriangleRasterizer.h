@@ -14,9 +14,9 @@ struct Vertex {
 };
 
 struct Triangle {
+    Vertex v0;
     Vertex v1;
     Vertex v2;
-    Vertex v3;
 };
 
 class TriangleRasterizer {

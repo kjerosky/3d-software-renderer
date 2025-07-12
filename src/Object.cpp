@@ -39,9 +39,9 @@ void Object::rasterize(TriangleRasterizer& triangle_rasterizer,
 
     for (WorldTriangle world_triangle : triangles) {
         glm::mat4 mv_matrix = view * model;
-        glm::vec4 p0_view = mv_matrix * glm::vec4(world_triangle.p0.location, 1.0f);
-        glm::vec4 p1_view = mv_matrix * glm::vec4(world_triangle.p1.location, 1.0f);
-        glm::vec4 p2_view = mv_matrix * glm::vec4(world_triangle.p2.location, 1.0f);
+        glm::vec4 p0_view = mv_matrix * glm::vec4(world_triangle.p0.position, 1.0f);
+        glm::vec4 p1_view = mv_matrix * glm::vec4(world_triangle.p1.position, 1.0f);
+        glm::vec4 p2_view = mv_matrix * glm::vec4(world_triangle.p2.position, 1.0f);
 
         glm::vec3 normal = glm::normalize(glm::cross(glm::vec3(p1_view - p0_view), glm::vec3(p2_view - p0_view)));
         glm::vec3 view_direction = glm::vec3(0.0f, 0.0f, -1.0f);

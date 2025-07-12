@@ -8,7 +8,7 @@
 #include "TriangleRasterizer.h"
 
 struct WorldVertex {
-    glm::vec3 location;
+    glm::vec3 position;
     glm::vec3 color;
     glm::vec2 tex_coord;
 };
