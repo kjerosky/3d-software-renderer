@@ -9,7 +9,8 @@ struct Vertex {
     glm::vec2 screen_coord;
     glm::vec3 color;
     glm::vec2 tex_coord;
-    float z;
+    float ndc_z;
+    float view_z;
 };
 
 struct Triangle {

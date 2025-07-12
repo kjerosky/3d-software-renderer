@@ -62,9 +62,9 @@ void Object::rasterize(TriangleRasterizer& triangle_rasterizer,
         glm::vec2 screen_p2 = glm::vec2(linear_remap(p2.x, -1.0f, 1.0f, 0, render_width - 1.0f), linear_remap(p2.y, -1.0f, 1.0f, render_height - 1.0f, 0.0f));
 
         Triangle triangle = {
-            { screen_p0, world_triangle.p0.color, world_triangle.p0.tex_coord, p0.z },
-            { screen_p1, world_triangle.p1.color, world_triangle.p1.tex_coord, p1.z },
-            { screen_p2, world_triangle.p2.color, world_triangle.p2.tex_coord, p2.z },
+            { screen_p0, world_triangle.p0.color, world_triangle.p0.tex_coord, p0.z, p0_view.z },
+            { screen_p1, world_triangle.p1.color, world_triangle.p1.tex_coord, p1.z, p1_view.z },
+            { screen_p2, world_triangle.p2.color, world_triangle.p2.tex_coord, p2.z, p2_view.z },
         };
 
         triangle_rasterizer.rasterize(renderer, triangle, texture_surface);

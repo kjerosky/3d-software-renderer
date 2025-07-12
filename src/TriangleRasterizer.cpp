@@ -62,7 +62,7 @@ void TriangleRasterizer::rasterize(SDL_Renderer* renderer, const Triangle& trian
                 w2 /= area;
                 w3 /= area;
 
-                float depth = triangle.v1.z * w1 + triangle.v2.z * w2 + triangle.v3.z * w3;
+                float depth = triangle.v1.ndc_z * w1 + triangle.v2.ndc_z * w2 + triangle.v3.ndc_z * w3;
                 int depth_buffer_index = y * depth_buffer_width + x;
                 if (depth > depth_buffer[depth_buffer_index]) {
                     continue;
@@ -75,12 +75,19 @@ void TriangleRasterizer::rasterize(SDL_Renderer* renderer, const Triangle& trian
                     color = triangle.v1.color * w1 + triangle.v2.color * w2 + triangle.v3.color * w3;
                     color = glm::clamp(color, 0.0f, 1.0f);
                 } else {
-                    glm::vec2 interpolated_texture_coordinates = glm::vec2(
-                        triangle.v1.tex_coord.x * w1 + triangle.v2.tex_coord.x * w2 + triangle.v3.tex_coord.x * w3,
-                        triangle.v1.tex_coord.y * w1 + triangle.v2.tex_coord.y * w2 + triangle.v3.tex_coord.y * w3
-                    );
+                    float inverse_z1 = 1.0f / triangle.v1.view_z;
+                    float inverse_z2 = 1.0f / triangle.v2.view_z;
+                    float inverse_z3 = 1.0f / triangle.v3.view_z;
+                    float interpolated_inverse_z = inverse_z1 * w1 + inverse_z2 * w2 + inverse_z3 * w3;
 
-                    color = sample_locked_surface(texture, pixel_format_details, interpolated_texture_coordinates);
+                    glm::vec2 uv_projected1 = triangle.v1.tex_coord * inverse_z1;
+                    glm::vec2 uv_projected2 = triangle.v2.tex_coord * inverse_z2;
+                    glm::vec2 uv_projected3 = triangle.v3.tex_coord * inverse_z3;
+
+                    glm::vec2 interpolated_perspective_corrected_uv =
+                        (uv_projected1 * w1 + uv_projected2 * w2 + uv_projected3 * w3) / interpolated_inverse_z;
+
+                    color = sample_locked_surface(texture, pixel_format_details, interpolated_perspective_corrected_uv);
                 }
 
                 SDL_SetRenderDrawColor(renderer, color.r * 255, color.g * 255, color.b * 255, 255);
