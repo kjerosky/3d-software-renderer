@@ -70,16 +70,20 @@ void TriangleRasterizer::rasterize(SDL_Renderer* renderer, const Triangle& trian
                     depth_buffer[depth_buffer_index] = depth;
                 }
 
+                float inverse_z0 = 1.0f / triangle.v0.view_z;
+                float inverse_z1 = 1.0f / triangle.v1.view_z;
+                float inverse_z2 = 1.0f / triangle.v2.view_z;
+                float interpolated_inverse_z = inverse_z0 * w0 + inverse_z1 * w1 + inverse_z2 * w2;
+
                 glm::vec3 color;
                 if (texture == nullptr) {
-                    color = triangle.v0.color * w0 + triangle.v1.color * w1 + triangle.v2.color * w2;
+                    glm::vec3 color_projected0 = triangle.v0.color * inverse_z0;
+                    glm::vec3 color_projected1 = triangle.v1.color * inverse_z1;
+                    glm::vec3 color_projected2 = triangle.v2.color * inverse_z2;
+
+                    color = (color_projected0 * w0 + color_projected1 * w1 + color_projected2 * w2) / interpolated_inverse_z;
                     color = glm::clamp(color, 0.0f, 1.0f);
                 } else {
-                    float inverse_z0 = 1.0f / triangle.v0.view_z;
-                    float inverse_z1 = 1.0f / triangle.v1.view_z;
-                    float inverse_z2 = 1.0f / triangle.v2.view_z;
-                    float interpolated_inverse_z = inverse_z0 * w0 + inverse_z1 * w1 + inverse_z2 * w2;
-
                     glm::vec2 uv_projected0 = triangle.v0.tex_coord * inverse_z0;
                     glm::vec2 uv_projected1 = triangle.v1.tex_coord * inverse_z1;
                     glm::vec2 uv_projected2 = triangle.v2.tex_coord * inverse_z2;
