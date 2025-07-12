@@ -37,6 +37,8 @@ int main() {
     const int WINDOW_WIDTH = 640;
     const int WINDOW_HEIGHT = 360;
 
+    const std::string WINDOW_TITLE = "3d Software Renderer";
+
     // --- sdl3 setup ---
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -44,7 +46,7 @@ int main() {
         return 1;
     }
 
-    window = SDL_CreateWindow("Triangle Rasterization Test", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE);
+    window = SDL_CreateWindow(WINDOW_TITLE.c_str(), WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE);
     if (window == nullptr) {
         std::cerr << "[ERROR] SDL_CreateWindow error: " << SDL_GetError() << std::endl;
         cleanup();
@@ -113,7 +115,7 @@ int main() {
         frame_count++;
         seconds_left_until_fps_report -= delta_time;
         if (seconds_left_until_fps_report <= 0.0f) {
-            SDL_SetWindowTitle(window, (std::string("FPS: ") + std::to_string(frame_count)).c_str());
+            SDL_SetWindowTitle(window, (WINDOW_TITLE + std::string(" | FPS: ") + std::to_string(frame_count)).c_str());
 
             seconds_left_until_fps_report = 1.0f;
             frame_count = 0;
