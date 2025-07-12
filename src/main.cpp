@@ -58,7 +58,7 @@ int main() {
         return 1;
     }
 
-    texture_surface = IMG_Load("test-texture.png");
+    texture_surface = IMG_Load("resources/test-texture.png");
     if (texture_surface == nullptr) {
         std::cerr << "[ERROR] IMG_Load error: " << SDL_GetError() << std::endl;
         cleanup();

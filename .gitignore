@@ -1,6 +1,5 @@
 .vscode
 
 .DS_Store
-*.dSYM
 
-3d-software-renderer
+build
