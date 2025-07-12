@@ -43,7 +43,7 @@ void Object::rasterize(TriangleRasterizer& triangle_rasterizer,
         glm::vec4 p1_view = mv_matrix * glm::vec4(world_triangle.p1.location, 1.0f);
         glm::vec4 p2_view = mv_matrix * glm::vec4(world_triangle.p2.location, 1.0f);
 
-        glm::vec3 normal = glm::cross(glm::vec3(p1_view - p0_view), glm::vec3(p2_view - p0_view));
+        glm::vec3 normal = glm::normalize(glm::cross(glm::vec3(p1_view - p0_view), glm::vec3(p2_view - p0_view)));
         glm::vec3 view_direction = glm::vec3(0.0f, 0.0f, -1.0f);
         if (glm::dot(normal, view_direction) > 0) {
             continue;
@@ -62,9 +62,9 @@ void Object::rasterize(TriangleRasterizer& triangle_rasterizer,
         glm::vec2 screen_p2 = glm::vec2(linear_remap(p2.x, -1.0f, 1.0f, 0, render_width - 1.0f), linear_remap(p2.y, -1.0f, 1.0f, render_height - 1.0f, 0.0f));
 
         Triangle triangle = {
-            { screen_p0, world_triangle.p0.color, world_triangle.p0.tex_coord },
-            { screen_p1, world_triangle.p1.color, world_triangle.p1.tex_coord },
-            { screen_p2, world_triangle.p2.color, world_triangle.p2.tex_coord },
+            { screen_p0, world_triangle.p0.color, world_triangle.p0.tex_coord, p0.z },
+            { screen_p1, world_triangle.p1.color, world_triangle.p1.tex_coord, p1.z },
+            { screen_p2, world_triangle.p2.color, world_triangle.p2.tex_coord, p2.z },
         };
 
         triangle_rasterizer.rasterize(renderer, triangle, texture_surface);

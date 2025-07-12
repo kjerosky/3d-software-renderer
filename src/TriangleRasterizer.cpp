@@ -4,8 +4,12 @@
 
 // --------------------------------------------------------------------------
 
-TriangleRasterizer::TriangleRasterizer() {
-    // nothing to do for now
+TriangleRasterizer::TriangleRasterizer(int depth_buffer_width, int depth_buffer_height)
+:
+depth_buffer_width(0),
+depth_buffer_height(0) {
+
+    resize_depth_buffer(depth_buffer_width, depth_buffer_height);
 }
 
 // --------------------------------------------------------------------------
@@ -57,6 +61,14 @@ void TriangleRasterizer::rasterize(SDL_Renderer* renderer, const Triangle& trian
                 w1 /= area;
                 w2 /= area;
                 w3 /= area;
+
+                float depth = triangle.v1.z * w1 + triangle.v2.z * w2 + triangle.v3.z * w3;
+                int depth_buffer_index = y * depth_buffer_width + x;
+                if (depth > depth_buffer[depth_buffer_index]) {
+                    continue;
+                } else {
+                    depth_buffer[depth_buffer_index] = depth;
+                }
 
                 glm::vec3 color;
                 if (texture == nullptr) {
@@ -112,4 +124,22 @@ float TriangleRasterizer::edge(const glm::vec2& a, const glm::vec2& b, const glm
     // This is the 2d cross product, which gives the signed area of the
     // parallelogram formed by the vectors ab and ap.
     return (p.x - a.x) * (b.y - a.y) - (p.y - a.y) * (b.x - a.x);
+}
+
+// --------------------------------------------------------------------------
+
+void TriangleRasterizer::clear_depth_buffer() {
+    std::fill(depth_buffer.begin(), depth_buffer.end(), 1.0f);
+}
+
+// --------------------------------------------------------------------------
+
+void TriangleRasterizer::resize_depth_buffer(int new_width, int new_height) {
+    if (depth_buffer_width == new_width && depth_buffer_height == new_height) {
+        return;
+    }
+
+    depth_buffer_width = new_width;
+    depth_buffer_height = new_height;
+    depth_buffer.resize(depth_buffer_width * depth_buffer_height);
 }

@@ -82,10 +82,10 @@ int main() {
 
     SDL_SetRenderVSync(renderer, 1);
 
-    TriangleRasterizer triangle_rasterizer;
+    TriangleRasterizer triangle_rasterizer(WINDOW_WIDTH, WINDOW_HEIGHT);
 
     Object main_object = primitives::cuboid(2.0f, 2.0f, 2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-    Object background_object = primitives::cuboid(1.0f, 1.0f, 1.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+    Object background_object = primitives::cuboid(1.5f, 1.5f, 1.5f, glm::vec3(0.0f, 1.0f, 0.0f));
 
     glm::vec3 camera_position = glm::vec3(0.0f, 0.0f, 5.0f);
 
@@ -165,6 +165,9 @@ int main() {
         if (is_rasterizing_textures) {
             render_texture_surface = texture_surface;
         }
+
+        triangle_rasterizer.resize_depth_buffer(render_width, render_height);
+        triangle_rasterizer.clear_depth_buffer();
 
         main_object.rasterize(triangle_rasterizer, renderer, render_texture_surface, projection, view, model);
         background_object.rasterize(triangle_rasterizer, renderer, render_texture_surface, projection, view, background_object_model);
