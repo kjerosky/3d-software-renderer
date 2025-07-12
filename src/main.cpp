@@ -11,13 +11,41 @@
 
 SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
+SDL_Texture* target_texture = nullptr;
 SDL_Surface* texture_surface = nullptr;
+
+// --------------------------------------------------------------------------
+
+void fit_inner_rect_within_outer_rect(const SDL_FRect& inner_rect, const SDL_FRect& outer_rect, SDL_FRect& result) {
+    float inner_aspect_ratio = inner_rect.w / inner_rect.h;
+
+    float vertical_size_after_horizontal_expansion = outer_rect.w / inner_aspect_ratio;
+    bool expanding_inner_rect_horizontally_fits_vertically = vertical_size_after_horizontal_expansion <= outer_rect.h;
+
+    if (expanding_inner_rect_horizontally_fits_vertically) {
+        result.w = outer_rect.w;
+        result.h = vertical_size_after_horizontal_expansion;
+        result.x = 0.0f;
+        result.y = (outer_rect.h - result.h) / 2.0f;
+    } else {
+        float horizontal_size_after_vertical_expansion = outer_rect.h * inner_aspect_ratio;
+
+        result.w = horizontal_size_after_vertical_expansion;
+        result.h = outer_rect.h;
+        result.x = (outer_rect.w - result.w) / 2.0f;
+        result.y = 0.0f;
+    }
+}
 
 // --------------------------------------------------------------------------
 
 void cleanup() {
     if (texture_surface != nullptr) {
         SDL_DestroySurface(texture_surface);
+    }
+
+    if (target_texture != nullptr) {
+        SDL_DestroyTexture(target_texture);
     }
 
     if (renderer != nullptr) {
@@ -34,8 +62,8 @@ void cleanup() {
 // --------------------------------------------------------------------------
 
 int main() {
-    const int WINDOW_WIDTH = 640;
-    const int WINDOW_HEIGHT = 360;
+    const int INITIAL_WINDOW_WIDTH = 640;
+    const int INITIAL_WINDOW_HEIGHT = 360;
 
     const std::string WINDOW_TITLE = "3d Software Renderer";
 
@@ -46,7 +74,7 @@ int main() {
         return 1;
     }
 
-    window = SDL_CreateWindow(WINDOW_TITLE.c_str(), WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE);
+    window = SDL_CreateWindow(WINDOW_TITLE.c_str(), INITIAL_WINDOW_WIDTH, INITIAL_WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE);
     if (window == nullptr) {
         std::cerr << "[ERROR] SDL_CreateWindow error: " << SDL_GetError() << std::endl;
         cleanup();
@@ -56,6 +84,13 @@ int main() {
     renderer = SDL_CreateRenderer(window, nullptr);
     if (renderer == nullptr) {
         std::cerr << "[ERROR] SDL_CreateRenderer error: " << SDL_GetError() << std::endl;
+        cleanup();
+        return 1;
+    }
+
+    target_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, INITIAL_WINDOW_WIDTH, INITIAL_WINDOW_HEIGHT);
+    if (target_texture == nullptr) {
+        std::cerr << "[ERROR] SDL_CreateTexture error: " << SDL_GetError() << std::endl;
         cleanup();
         return 1;
     }
@@ -82,17 +117,21 @@ int main() {
 
     SDL_SetRenderVSync(renderer, 1);
 
-    TriangleRasterizer triangle_rasterizer(WINDOW_WIDTH, WINDOW_HEIGHT);
+    TriangleRasterizer triangle_rasterizer(INITIAL_WINDOW_WIDTH, INITIAL_WINDOW_HEIGHT);
 
     Object main_object = primitives::cuboid(2.0f, 2.0f, 2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
     Object background_object = primitives::cuboid(1.5f, 1.5f, 1.5f, glm::vec3(1.0f, 0.0f, 0.0f));
 
     glm::vec3 camera_position = glm::vec3(0.0f, 0.0f, 5.0f);
 
-    bool is_rasterizing_textures = true;
-
     const bool* keyboard_state = SDL_GetKeyboardState(nullptr);
-    bool previous_render_mode_key_state = false;
+
+    bool is_rasterizing_textures = true;
+    bool previous_texture_rasterization_toggle_key_state = false;
+
+    bool is_upscaling = true;
+    bool previous_upscale_toggle_key_state = false;
+    SDL_FRect target_texture_rect = { 0, 0, INITIAL_WINDOW_WIDTH, INITIAL_WINDOW_HEIGHT };
 
     const float ROTATION_DEGREES_Y_PER_SECOND = 360.0f / 8.0f;
     const float ROTATION_DEGREES_X_PER_SECOND = 360.0f / 16.0f;
@@ -130,14 +169,34 @@ int main() {
             }
         }
 
-        const bool current_render_mode_key_state = keyboard_state[SDL_SCANCODE_SPACE];
-        if (!previous_render_mode_key_state && current_render_mode_key_state) {
+        const bool current_texture_rasterization_toggle_key_state = keyboard_state[SDL_SCANCODE_RETURN];
+        if (!previous_texture_rasterization_toggle_key_state && current_texture_rasterization_toggle_key_state) {
             is_rasterizing_textures = !is_rasterizing_textures;
         }
-        previous_render_mode_key_state = current_render_mode_key_state;
+        previous_texture_rasterization_toggle_key_state = current_texture_rasterization_toggle_key_state;
 
-        SDL_SetRenderDrawColor(renderer, 32, 32, 32, 255);
-        SDL_RenderClear(renderer);
+        const bool current_upscale_toggle_key_state = keyboard_state[SDL_SCANCODE_SPACE];
+        if (!previous_upscale_toggle_key_state && current_upscale_toggle_key_state) {
+            is_upscaling = !is_upscaling;
+        }
+        previous_upscale_toggle_key_state = current_upscale_toggle_key_state;
+
+        if (is_upscaling) {
+            // Since we're going to maintain the original aspect ratio, filling the window
+            // with black before rendering the target texture will give us "black bars"
+            // around any space not covered by the target texture due to aspect ratio
+            // misalignment.
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            SDL_RenderClear(renderer);
+
+            SDL_SetRenderTarget(renderer, target_texture);
+
+            SDL_SetRenderDrawColor(renderer, 32, 32, 32, 255);
+            SDL_RenderClear(renderer);
+        } else {
+            SDL_SetRenderDrawColor(renderer, 32, 32, 32, 255);
+            SDL_RenderClear(renderer);
+        }
 
         rotation_degrees_y += ROTATION_DEGREES_Y_PER_SECOND * delta_time;
         rotation_degrees_x += ROTATION_DEGREES_X_PER_SECOND * delta_time;
@@ -171,6 +230,19 @@ int main() {
 
         main_object.rasterize(triangle_rasterizer, renderer, render_texture_surface, projection, view, model);
         background_object.rasterize(triangle_rasterizer, renderer, render_texture_surface, projection, view, background_object_model);
+
+        if (is_upscaling) {
+            SDL_SetRenderTarget(renderer, nullptr);
+
+            int window_width, window_height;
+            SDL_GetRenderOutputSize(renderer, &window_width, &window_height);
+
+            SDL_FRect texture_fit_to_window_rect;
+            SDL_FRect window_rect = { 0.0f, 0.0f, static_cast<float>(window_width), static_cast<float>(window_height) };
+            fit_inner_rect_within_outer_rect(target_texture_rect, window_rect, texture_fit_to_window_rect);
+
+            SDL_RenderTexture(renderer, target_texture, nullptr, &texture_fit_to_window_rect);
+        }
 
         SDL_RenderPresent(renderer);
     }
