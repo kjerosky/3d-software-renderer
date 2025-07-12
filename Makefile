@@ -9,7 +9,8 @@ LIBRARIES = -lSDL3 -lSDL3_image
 SOURCE_FILES = \
 	main.cpp \
 	TriangleRasterizer.cpp \
-	Object.cpp
+	Object.cpp \
+	Primitives.cpp
 
 $(EXECUTABLE):
 	$(CC) $(FLAGS) -o $(EXECUTABLE) $(SOURCE_FILES) $(INCLUDE_PATHS) $(LIBRARY_PATHS) $(LIBRARIES)

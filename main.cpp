@@ -7,7 +7,7 @@
 #include <string>
 
 #include "TriangleRasterizer.h"
-#include "Object.h"
+#include "Primitives.h"
 
 SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
@@ -82,20 +82,7 @@ int main() {
 
     TriangleRasterizer triangle_rasterizer;
 
-    WorldTriangle tri1 = {
-        { glm::vec3(-1.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec2(0.0f, 0.0f) },
-        { glm::vec3( 1.0f, -1.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec2(1.0f, 0.0f) },
-        { glm::vec3( 1.0f,  1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 0.0f), glm::vec2(1.0f, 1.0f) },
-    };
-    WorldTriangle tri2 = {
-        { glm::vec3(-1.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec2(0.0f, 0.0f) },
-        { glm::vec3( 1.0f,  1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 0.0f), glm::vec2(1.0f, 1.0f) },
-        { glm::vec3(-1.0f,  1.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 1.0f) },
-    };
-
-    Object object;
-    object.add_triangle(tri1);
-    object.add_triangle(tri2);
+    Object main_object = primitives::cuboid(2.0f, 2.0f, 2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
 
     glm::vec3 camera_position = glm::vec3(0.0f, 0.0f, 5.0f);
 
@@ -104,8 +91,10 @@ int main() {
     const bool* keyboard_state = SDL_GetKeyboardState(nullptr);
     bool previous_render_mode_key_state = false;
 
-    float rotation_degrees_y = 0.0f;
     const float ROTATION_DEGREES_Y_PER_SECOND = 360.0f / 8.0f;
+    const float ROTATION_DEGREES_X_PER_SECOND = 360.0f / 16.0f;
+    float rotation_degrees_y = 0.0f;
+    float rotation_degrees_x = 0.0f;
 
     Uint64 previous_timestamp = SDL_GetTicks();
 
@@ -148,6 +137,7 @@ int main() {
         SDL_RenderClear(renderer);
 
         rotation_degrees_y += ROTATION_DEGREES_Y_PER_SECOND * delta_time;
+        rotation_degrees_x += ROTATION_DEGREES_X_PER_SECOND * delta_time;
 
         int render_width, render_height;
         SDL_GetCurrentRenderOutputSize(renderer, &render_width, &render_height);
@@ -158,8 +148,13 @@ int main() {
             0.1f,
             100.0f
         );
+
         glm::mat4 view = glm::lookAt(camera_position, camera_position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        glm::mat4 model = glm::rotate(glm::mat4(1.0f), glm::radians(rotation_degrees_y), glm::vec3(0.0f, 1.0f, 0.0f));
+
+        glm::mat4 rotation_x = glm::rotate(glm::mat4(1.0f), glm::radians(rotation_degrees_x), glm::vec3(1.0f, 0.0f, 0.0f));
+        glm::mat4 rotation_y = glm::rotate(glm::mat4(1.0f), glm::radians(rotation_degrees_y), glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::mat4 model = rotation_x * rotation_y;
+
         glm::mat4 mvp_matrix = projection * view * model;
 
         SDL_Surface* render_texture_surface = nullptr;
@@ -167,7 +162,7 @@ int main() {
             render_texture_surface = texture_surface;
         }
 
-        object.rasterize(triangle_rasterizer, renderer, render_texture_surface, mvp_matrix);
+        main_object.rasterize(triangle_rasterizer, renderer, render_texture_surface, mvp_matrix);
 
         SDL_RenderPresent(renderer);
     }
