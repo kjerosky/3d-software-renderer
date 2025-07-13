@@ -7,7 +7,8 @@
 #include <string>
 
 #include "TriangleRasterizer.h"
-#include "Primitives.h"
+#include "primitives.h"
+#include "texture.h"
 
 SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
@@ -119,12 +120,15 @@ int main() {
 
     TriangleRasterizer triangle_rasterizer(INITIAL_WINDOW_WIDTH, INITIAL_WINDOW_HEIGHT);
 
-    Object main_object = primitives::cuboid(2.0f, 2.0f, 2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-    Object background_object = primitives::cuboid(1.5f, 1.5f, 1.5f, glm::vec3(1.0f, 0.0f, 0.0f));
+    Object big_cube = primitives::cuboid(2.0f, 2.0f, 2.0f, glm::vec3(0.0f, 1.0f, 0.0f), 1.0f);
+    Object small_cube = primitives::cuboid(0.5f, 0.5f, 0.5f, glm::vec3(1.0f, 0.0f, 0.0f), 1.0f);
 
     glm::vec3 camera_position = glm::vec3(0.0f, 0.0f, 5.0f);
 
     const bool* keyboard_state = SDL_GetKeyboardState(nullptr);
+
+    bool is_paused = false;
+    bool previous_toggle_pause_key_state = false;
 
     bool is_rasterizing_textures = true;
     bool previous_texture_rasterization_toggle_key_state = false;
@@ -132,6 +136,12 @@ int main() {
     bool is_upscaling = true;
     bool previous_upscale_toggle_key_state = false;
     SDL_FRect target_texture_rect = { 0, 0, INITIAL_WINDOW_WIDTH, INITIAL_WINDOW_HEIGHT };
+
+    texture::TextureFilter texture_filter = texture::TextureFilter::NEAREST;
+    bool previous_change_texture_filter_key_state = false;
+
+    texture::TextureWrap texture_wrap = texture::TextureWrap::REPEAT;
+    bool previous_change_texture_wrap_key_state = false;
 
     const float ROTATION_DEGREES_Y_PER_SECOND = 360.0f / 8.0f;
     const float ROTATION_DEGREES_X_PER_SECOND = 360.0f / 16.0f;
@@ -169,17 +179,43 @@ int main() {
             }
         }
 
-        const bool current_texture_rasterization_toggle_key_state = keyboard_state[SDL_SCANCODE_RETURN];
+        const bool current_toggle_pause_key_state = keyboard_state[SDL_SCANCODE_SPACE];
+        if (!previous_toggle_pause_key_state && current_toggle_pause_key_state) {
+            is_paused = !is_paused;
+        }
+        previous_toggle_pause_key_state = current_toggle_pause_key_state;
+
+        const bool current_texture_rasterization_toggle_key_state = keyboard_state[SDL_SCANCODE_T];
         if (!previous_texture_rasterization_toggle_key_state && current_texture_rasterization_toggle_key_state) {
             is_rasterizing_textures = !is_rasterizing_textures;
         }
         previous_texture_rasterization_toggle_key_state = current_texture_rasterization_toggle_key_state;
 
-        const bool current_upscale_toggle_key_state = keyboard_state[SDL_SCANCODE_SPACE];
+        const bool current_upscale_toggle_key_state = keyboard_state[SDL_SCANCODE_U];
         if (!previous_upscale_toggle_key_state && current_upscale_toggle_key_state) {
             is_upscaling = !is_upscaling;
         }
         previous_upscale_toggle_key_state = current_upscale_toggle_key_state;
+
+        const bool current_change_texture_filter_key_state = keyboard_state[SDL_SCANCODE_F];
+        if (!previous_change_texture_filter_key_state && current_change_texture_filter_key_state) {
+            if (texture_filter == texture::TextureFilter::NEAREST) {
+                texture_filter = texture::TextureFilter::BILINEAR;
+            } else {
+                texture_filter = texture::TextureFilter::NEAREST;
+            }
+        }
+        previous_change_texture_filter_key_state = current_change_texture_filter_key_state;
+
+        const bool current_change_texture_wrap_key_state = keyboard_state[SDL_SCANCODE_W];
+        if (!previous_change_texture_wrap_key_state && current_change_texture_wrap_key_state) {
+            if (texture_wrap == texture::TextureWrap::CLAMP) {
+                texture_wrap = texture::TextureWrap::REPEAT;
+            } else {
+                texture_wrap = texture::TextureWrap::CLAMP;
+            }
+        }
+        previous_change_texture_wrap_key_state = current_change_texture_wrap_key_state;
 
         if (is_upscaling) {
             // Since we're going to maintain the original aspect ratio, filling the window
@@ -198,8 +234,10 @@ int main() {
             SDL_RenderClear(renderer);
         }
 
-        rotation_degrees_y += ROTATION_DEGREES_Y_PER_SECOND * delta_time;
-        rotation_degrees_x += ROTATION_DEGREES_X_PER_SECOND * delta_time;
+        if (!is_paused) {
+            rotation_degrees_y += ROTATION_DEGREES_Y_PER_SECOND * delta_time;
+            rotation_degrees_x += ROTATION_DEGREES_X_PER_SECOND * delta_time;
+        }
 
         int render_width, render_height;
         SDL_GetCurrentRenderOutputSize(renderer, &render_width, &render_height);
@@ -215,10 +253,13 @@ int main() {
 
         glm::mat4 rotation_x = glm::rotate(glm::mat4(1.0f), glm::radians(rotation_degrees_x), glm::vec3(1.0f, 0.0f, 0.0f));
         glm::mat4 rotation_y = glm::rotate(glm::mat4(1.0f), glm::radians(rotation_degrees_y), glm::vec3(0.0f, 1.0f, 0.0f));
-        glm::mat4 model = rotation_x * rotation_y;
+        glm::mat4 model_rotation = rotation_x * rotation_y;
 
-        glm::mat4 background_object_model_translation = glm::translate(glm::mat4(1.0), glm::vec3(1.5f, 0.0f, 0.0f));
-        glm::mat4 background_object_model = background_object_model_translation * model;
+        glm::mat4 big_cube_translation = glm::translate(glm::mat4(1.0f), glm::vec3(-1.5f, 0.0f, 0.0f));
+        glm::mat4 big_cube_model = big_cube_translation * model_rotation;
+
+        glm::mat4 small_cube_translation = glm::translate(glm::mat4(1.0), glm::vec3(1.75f, 0.0f, 0.0f));
+        glm::mat4 small_cube_model = small_cube_translation * model_rotation;
 
         SDL_Surface* render_texture_surface = nullptr;
         if (is_rasterizing_textures) {
@@ -227,9 +268,11 @@ int main() {
 
         triangle_rasterizer.resize_depth_buffer(render_width, render_height);
         triangle_rasterizer.clear_depth_buffer();
+        triangle_rasterizer.set_texture_filter(texture_filter);
+        triangle_rasterizer.set_texture_wrap(texture_wrap);
 
-        main_object.rasterize(triangle_rasterizer, renderer, render_texture_surface, projection, view, model);
-        background_object.rasterize(triangle_rasterizer, renderer, render_texture_surface, projection, view, background_object_model);
+        big_cube.rasterize(triangle_rasterizer, renderer, render_texture_surface, projection, view, big_cube_model);
+        small_cube.rasterize(triangle_rasterizer, renderer, render_texture_surface, projection, view, small_cube_model);
 
         if (is_upscaling) {
             SDL_SetRenderTarget(renderer, nullptr);

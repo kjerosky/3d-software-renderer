@@ -2,12 +2,16 @@
 
 #include <algorithm>
 
+#include "texture.h"
+
 // --------------------------------------------------------------------------
 
 TriangleRasterizer::TriangleRasterizer(int depth_buffer_width, int depth_buffer_height)
 :
 depth_buffer_width(0),
-depth_buffer_height(0) {
+depth_buffer_height(0),
+texture_filter(texture::TextureFilter::NEAREST),
+texture_wrap(texture::TextureWrap::CLAMP) {
 
     resize_depth_buffer(depth_buffer_width, depth_buffer_height);
 }
@@ -91,7 +95,7 @@ void TriangleRasterizer::rasterize(SDL_Renderer* renderer, const Triangle& trian
                     glm::vec2 interpolated_perspective_corrected_uv =
                         (uv_projected0 * w0 + uv_projected1 * w1 + uv_projected2 * w2) / interpolated_inverse_z;
 
-                    color = sample_locked_surface(texture, pixel_format_details, interpolated_perspective_corrected_uv);
+                    color = texture::sample_locked_surface(texture, pixel_format_details, interpolated_perspective_corrected_uv, texture_filter, texture_wrap);
                 }
 
                 SDL_SetRenderDrawColor(renderer, color.r * 255, color.g * 255, color.b * 255, 255);
@@ -103,30 +107,6 @@ void TriangleRasterizer::rasterize(SDL_Renderer* renderer, const Triangle& trian
     if (texture != nullptr) {
         SDL_UnlockSurface(texture);
     }
-}
-
-// --------------------------------------------------------------------------
-
-glm::vec3 TriangleRasterizer::sample_locked_surface(SDL_Surface* surface, const SDL_PixelFormatDetails* surface_pixel_format_details, const glm::vec2& texture_coordinates) {
-    // Remember that the y-coordinate is upside down because of how images are loaded!
-    // Also, for now we'll just clamp texture coordinates.
-    float u = glm::clamp(texture_coordinates.x, 0.0f, 1.0f);
-    float v = glm::clamp(1.0f - texture_coordinates.y, 0.0f, 1.0f);
-
-    // We're assuming that the surface has four bytes per pixel, so the client
-    // needs to ensure that the surface meets this invariant.
-    int pixel_x = static_cast<int>(u * surface->w);
-    int pixel_y = static_cast<int>(v * surface->h);
-    int pixel_index = pixel_y * surface->w + pixel_x;
-    Uint32 pixel_value = reinterpret_cast<Uint32*>(surface->pixels)[pixel_index];
-
-    Uint8 r, g, b;
-    SDL_GetRGB(pixel_value, surface_pixel_format_details, nullptr, &r, &g, &b);
-
-    glm::vec3 color = glm::vec3(r / 255.0f, g / 255.0f, b / 255.0f);
-    color = glm::clamp(color, 0.0f, 1.0f);
-
-    return color;
 }
 
 // --------------------------------------------------------------------------
@@ -153,4 +133,16 @@ void TriangleRasterizer::resize_depth_buffer(int new_width, int new_height) {
     depth_buffer_width = new_width;
     depth_buffer_height = new_height;
     depth_buffer.resize(depth_buffer_width * depth_buffer_height);
+}
+
+// --------------------------------------------------------------------------
+
+void TriangleRasterizer::set_texture_filter(const texture::TextureFilter texture_filter) {
+    this->texture_filter = texture_filter;
+}
+
+// --------------------------------------------------------------------------
+
+void TriangleRasterizer::set_texture_wrap(const texture::TextureWrap texture_wrap) {
+    this->texture_wrap = texture_wrap;
 }

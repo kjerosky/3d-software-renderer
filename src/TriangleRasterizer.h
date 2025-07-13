@@ -5,6 +5,8 @@
 #include <glm/glm.hpp>
 #include <vector>
 
+#include "texture.h"
+
 struct Vertex {
     glm::vec2 screen_coord;
     glm::vec3 color;
@@ -29,6 +31,8 @@ public:
     void rasterize(SDL_Renderer* renderer, const Triangle& triangle, SDL_Surface* texture);
     void clear_depth_buffer();
     void resize_depth_buffer(int new_width, int new_height);
+    void set_texture_filter(const texture::TextureFilter texture_filter);
+    void set_texture_wrap(const texture::TextureWrap texture_wrap);
 
 private:
 
@@ -36,8 +40,10 @@ private:
     int depth_buffer_height;
     std::vector<float> depth_buffer;
 
+    texture::TextureFilter texture_filter;
+    texture::TextureWrap texture_wrap;
+
     float edge(const glm::vec2& a, const glm::vec2& b, const glm::vec2& p);
-    glm::vec3 sample_locked_surface(SDL_Surface* surface, const SDL_PixelFormatDetails* surface_pixel_format_details, const glm::vec2& tex_coord);
 };
 
 #endif

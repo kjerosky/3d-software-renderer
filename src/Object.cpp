@@ -43,12 +43,6 @@ void Object::rasterize(TriangleRasterizer& triangle_rasterizer,
         glm::vec4 p1_view = mv_matrix * glm::vec4(world_triangle.p1.position, 1.0f);
         glm::vec4 p2_view = mv_matrix * glm::vec4(world_triangle.p2.position, 1.0f);
 
-        glm::vec3 normal = glm::normalize(glm::cross(glm::vec3(p1_view - p0_view), glm::vec3(p2_view - p0_view)));
-        glm::vec3 view_direction = glm::vec3(0.0f, 0.0f, -1.0f);
-        if (glm::dot(normal, view_direction) > 0) {
-            continue;
-        }
-
         glm::vec4 p0 = projection * p0_view;
         glm::vec4 p1 = projection * p1_view;
         glm::vec4 p2 = projection * p2_view;
@@ -57,9 +51,16 @@ void Object::rasterize(TriangleRasterizer& triangle_rasterizer,
         p1 /= p1.w;
         p2 /= p2.w;
 
+        // Back face culling
+        float winding = (p1.x - p0.x) * (p2.y - p0.y) - (p1.y - p0.y) * (p2.x - p0.x);
+        if (winding < 0) {
+            continue;
+        }
+
         glm::vec2 screen_p0 = glm::vec2(linear_remap(p0.x, -1.0f, 1.0f, 0, render_width - 1.0f), linear_remap(p0.y, -1.0f, 1.0f, render_height - 1.0f, 0.0f));
         glm::vec2 screen_p1 = glm::vec2(linear_remap(p1.x, -1.0f, 1.0f, 0, render_width - 1.0f), linear_remap(p1.y, -1.0f, 1.0f, render_height - 1.0f, 0.0f));
         glm::vec2 screen_p2 = glm::vec2(linear_remap(p2.x, -1.0f, 1.0f, 0, render_width - 1.0f), linear_remap(p2.y, -1.0f, 1.0f, render_height - 1.0f, 0.0f));
+
 
         Triangle triangle = {
             { screen_p0, world_triangle.p0.color, world_triangle.p0.tex_coord, p0.z, p0_view.z },
